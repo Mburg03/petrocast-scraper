@@ -29,7 +29,7 @@ from notifier.telegram import notify
 from scraper.eia import ScrapeResult, scrape
 from scraper.storage import upload_audit
 from utils.config import load_config
-from utils.dates import is_stale, today_utc
+from utils.dates import is_stale, prev_business_day, today_utc
 
 logging.basicConfig(
     level=logging.INFO,
@@ -126,9 +126,12 @@ def run(dry_run: bool = False) -> int:
         return 0
 
     # ── Step 3: Stale-date detection with one retry ───────────────────────────
+    # EIA lags 1 business day (Monday shows Friday). is_stale only triggers
+    # when data is older than the previous business day (e.g. EIA missed an update).
     if is_stale(result.date, run_date):
+        expected = prev_business_day(run_date).isoformat()
         LOG.warning(
-            f"EIA shows {result.date}, today is {run_date_str} — data is stale. "
+            f"EIA shows {result.date}, expected >= {expected} — data is stale. "
             f"Waiting {cfg.retry_wait_seconds}s before retry..."
         )
         if not dry_run:
