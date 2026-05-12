@@ -16,14 +16,16 @@ def prev_business_day(d: date) -> date:
 
 def is_stale(scraped_date_str: str | None, reference_date: date) -> bool:
     """
-    EIA publishes prices with a 1-business-day lag (e.g. Monday shows Friday).
-    Data is stale only if it's older than the most recent business day before today.
+    EIA publishes spot prices with up to a 2-business-day lag:
+      - Tuesday shows Friday  (weekend gap + 1-day publishing lag)
+      - Wednesday+ shows previous business day
+    Data is stale only when older than 2 business days before today.
     """
     if not scraped_date_str:
         return True
     try:
         scraped = date.fromisoformat(scraped_date_str)
-        expected = prev_business_day(reference_date)
+        expected = prev_business_day(prev_business_day(reference_date))
         return scraped < expected
     except (ValueError, TypeError):
         return True
